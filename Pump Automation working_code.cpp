@@ -74,10 +74,15 @@ void setup() {
   setPump(false);
 
   Wire.begin();
-  if (!rtc.begin()) {
-    Serial.println("Couldn't find RTC!");
-    while (1);  // halt if RTC not found
-  }
+if (!rtc.begin()) {
+    Serial.println("Couldn't find RTC! Continuing without time...");
+    // Optionally blink LED fast to indicate error
+    for(int i=0; i<40; i++) {
+        digitalWrite(LED, !digitalRead(LED));
+        delay(1000);
+    }
+    // Do NOT halt the whole device
+}
 
   if (rtc.lostPower()) {
     Serial.println("RTC lost power, setting default time!");
