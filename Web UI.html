@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: Arial, sans-serif; background:#0f172a; color:white; text-align:center; margin:0; padding:10px;}
+  .card { background:#1e293b; padding:20px; margin:15px auto; max-width:600px; border-radius:18px;}
+  button { padding:12px 20px; margin:8px; border:none; border-radius:10px; font-size:16px; cursor:pointer;}
+  .on { background:#22c55e; }
+  .off { background:#ef4444; }
+  input { padding:10px; margin:5px; width:60px; text-align:center;}
+</style>
+</head>
+<body>
+<h2>Smart Pump Controller</h2>
+
+<div class="card">
+  <h3>Current Time</h3>
+  <h2 id="clock">--:--:--</h2>
+</div>
+
+<div class="card">
+  <h3>Pump Status</h3>
+  <h2 id="status">OFF</h2>
+  <button onclick="toggle()" id="toggleBtn">Toggle Pump</button>
+</div>
+
+<div class="card">
+  <h3>Set RTC Time</h3>
+  <input id="year" type="number" placeholder="Year" value="2026">
+  <input id="month" type="number" placeholder="Month" value="4">
+  <input id="day" type="number" placeholder="Day" value="4"><br>
+  <input id="h" type="number" placeholder="Hour" value="12">
+  <input id="m" type="number" placeholder="Min" value="0">
+  <input id="s" type="number" placeholder="Sec" value="0">
+  <button onclick="setTime()">Set Time</button>
+</div>
+
+<div class="card">
+  <h3>Add Schedule</h3>
+  <input id="sh" type="number" placeholder="Hour (0-23)">
+  <input id="sm" type="number" placeholder="Minute (0-59)">
+  <input id="sd" type="number" placeholder="Duration (min)">
+  <button onclick="addSchedule()">Add</button>
+</div>
+
+<div class="card">
+  <h3>Saved Schedules</h3>
+  <div id="list"></div>
+</div>
+
+<script>
+function toggle() {
+  fetch('/toggle').then(() => updateStatus());
+}
+
+function setTime() {
+  const y = document.getElementById('year').value;
+  const mo = document.getElementById('month').value;
+  const d = document.getElementById('day').value;
+  const h = document.getElementById('h').value;
+  const m = document.getElementById('m').value;
+  const s = document.getElementById('s').value;
+
+  fetch(`/setTime?year=${y}&month=${mo}&day=${d}&h=${h}&m=${m}&s=${s}`)
+    .then(r => r.text())
+    .then(txt => alert(txt));
+}
+
+function addSchedule() {
+  const h = document.getElementById('sh').value;
+  const m = document.getElementById('sm').value;
+  const d = document.getElementById('sd').value;
+
+  fetch(`/add?h=${h}&m=${m}&d=${d}`)
+    .then(() => loadSchedules());
+}
+
+function del(i) {
+  fetch(`/del?id=${i}`).then(() => loadSchedules());
+}
+
+function loadSchedules() {
+  fetch('/list').then(r => r.json()).then(data => {
+    let html = "";
+    data.forEach((s, i) => {
+      html += `<p>${s.h.toString().padStart(2,'0')}:${s.m.toString().padStart(2,'0')} → ${s.d} min 
+               <button onclick="del(${i})">Delete</button></p>`;
+    });
+    document.getElementById('list').innerHTML = html || "<p>No schedules added yet.</p>";
+  });
+}
+
+function updateClock() {
+  fetch('/time').then(r => r.json()).then(t => {
+    const timeStr = `${t.h.toString().padStart(2,'0')}:${t.m.toString().padStart(2,'0')}:${t.s.toString().padStart(2,'0')}`;
+    document.getElementById('clock').innerHTML = timeStr;
+  });
+}
+
+function updateStatus() {
+  fetch('/status').then(r => r.json()).then(s => {
+    const st = document.getElementById('status');
+    st.innerHTML = s.pump ? "ON" : "OFF";
+    st.style.color = s.pump ? "#22c55e" : "#ef4444";
+  });
+}
+
+setInterval(updateClock, 1000);
+setInterval(updateStatus, 1000);
+setInterval(loadSchedules, 3000);
+
+updateClock();
+updateStatus();
+loadSchedules();
+</script>
+</body>
+</html>
